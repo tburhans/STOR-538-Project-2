@@ -1,0 +1,60 @@
+---
+title: "Prediction Project"
+author: "Fab"
+date: "3/18/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+```{r message=FALSE, warning=FALSE}
+library(curl)
+library(tidyverse)
+GAMES<-read.csv(url('https://raw.githubusercontent.com/mattymo18/STOR-538-Project2-2021/master/Source-Data/games.csv'))
+GAMES_DETAILS<-read.csv(url('https://raw.githubusercontent.com/mattymo18/STOR-538-Project2-2021/master/Source-Data/games_details.csv'))
+TEAMS<-read.csv(url('https://raw.githubusercontent.com/mattymo18/STOR-538-Project2-2021/master/Source-Data/teams.csv'))
+```
+
+
+Taking out rows in Comment column that have characters in them.
+```{r}
+GAMES_DETAILS<-subset(GAMES_DETAILS, nchar(GAMES_DETAILS$COMMENT)==0)
+```
+
+Adding a B(Bench) for empty entries under the Start Position column.
+```{r}
+GAMES_DETAILS$START_POSITION[GAMES_DETAILS$START_POSITION==""] <- NA
+GAMES_DETAILS$START_POSITION[is.na(GAMES_DETAILS$START_POSITION)] = 'B'
+```
+
+Changing the minutes in the minute column to seconds.
+```{r}
+new<- filter(GAMES_DETAILS, nchar(GAMES_DETAILS$MIN)==5)
+new1<-filter(GAMES_DETAILS, nchar(GAMES_DETAILS$MIN)==4)
+new1$MIN<- paste("0",new1$MIN, sep="")
+new2<-filter(GAMES_DETAILS, nchar(GAMES_DETAILS$MIN)==2)
+new2$MIN<- paste(new2$MIN, ":00", sep="")
+new3<-filter(GAMES_DETAILS, nchar(GAMES_DETAILS$MIN)==1)
+new3$MIN<- paste("0", new3$MIN, ":00", sep="")
+new4<-filter(GAMES_DETAILS, nchar(GAMES_DETAILS$MIN)==0)
+new4$MIN<-paste("00:00", new4$MIN, sep="") 
+GAMES_DETAILS<- Reduce(function(...) merge(..., all=TRUE), list(new, new1, new2, new3, new4))
+library(lubridate)
+mmss_to_ss <- function  (string)
+{
+  mmss <- strsplit (string, ":", T)
+  mm <- as.numeric (mmss[[1]][1])
+  ss <- as.numeric (mmss[[1]][2])
+  return (mm * 60 + ss)
+}
+temp<- GAMES_DETAILS[9]
+new5<- apply(temp, 1, mmss_to_ss)
+new5<- as.data.frame(new5)
+GAMES_DETAILS$MIN1 <- new5$new5
+GAMES_DETAILS<- subset(GAMES_DETAILS, select = -MIN )
+names(GAMES_DETAILS)[28] <- "MIN"
+```
+
