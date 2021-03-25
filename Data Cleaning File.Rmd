@@ -16,8 +16,9 @@ Below is the chunk of code that Mario gave us in class, changed a little bit so 
 #Preview Datasets
 head(filter(GAMES,GAME_ID==12000047))
 head(filter(GAMES_DETAILS,GAME_ID==12000047))
-head(GAMES)
-head(GAMES_DETAILS)
+head(GAMES, n=20)
+head(GAMES_DETAILS, n=20)
+head(TEAMS)
 
 
 #Simplify Games Data
@@ -47,7 +48,7 @@ ALL_TEAMS= TEAMS %>%
             select(TEAM_ID,CITY,NICKNAME) %>%
             unite(NAME,CITY,NICKNAME,sep=" ")
 
-head(TWO_TEAMS)
+head(ALL_TEAMS)
 
 #Merging Team Name into original data
 ALL_GAMES_DONE_AGAIN=left_join(ALL_GAMES_DONE,ALL_TEAMS,by=c("HOME_TEAM_ID"="TEAM_ID")) %>%
@@ -59,4 +60,39 @@ ALL_GAMES_DONE_AGAIN=left_join(ALL_GAMES_DONE,ALL_TEAMS,by=c("HOME_TEAM_ID"="TEA
 
 head(ALL_GAMES_DONE_AGAIN)
 ```
+
+
+I'll work on cleaning the GAMES dataset here
+```{r}
+library(tidyr)
+head(GAMES, n=20)
+
+GAMES_CLEANING = data.frame(GAMES[,-3])
+head(GAMES_CLEAN, n=20)
+
+GAMES_CLEAN = GAMES_CLEANING %>%
+  separate(GAME_DATE_EST, sep="-", into = c("GAME_YEAR", "GAME_MONTH", "GAME_DAY"))
+
+head(GAMES_CLEAN)
+```
+
+I'll work on cleaning the TEAMS dataset here
+```{r}
+head(TEAMS, n=30)
+
+TEAMS_CLEAN = data.frame(TEAMS[,-c(1,12)])
+
+head(TEAMS_CLEAN, n=30)
+
+TEAMS_CLEAN[3,7] = 17791
+TEAMS_CLEAN[13,7] = 19000
+TEAMS_CLEAN[15,7] = 20000
+TEAMS_CLEAN[17,7] = 19500
+TEAMS_CLEAN[18,7] = 18422
+
+head(TEAMS_CLEAN, n=30)
+```
+
+
+
 
