@@ -1,0 +1,134 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+rm(list=ls())
+```
+
+```{r}
+#Install and Load RCurl Package
+library(curl)
+library(tidyverse)
+library(readr)
+library(dplyr)
+```
+
+```{r}
+GAMES <- read.csv(url("https://raw.githubusercontent.com/mattymo18/STOR-538-Project2-2021/master/Source-Data/games.csv"))
+
+GAMES_DETAILS <- read.csv(url("https://raw.githubusercontent.com/mattymo18/STOR-538-Project2-2021/master/Source-Data/games_details.csv"))
+
+TEAMS <- read.csv(url("https://raw.githubusercontent.com/mattymo18/STOR-538-Project2-2021/master/Source-Data/teams.csv"))
+```
+
+
+Below is the chunk of code that Mario gave us in class, changed a little bit so that it is for all of the games in the dataset
+```{r}
+#Preview Datasets
+head(filter(GAMES,GAME_ID==12000047))
+head(filter(GAMES_DETAILS,GAME_ID==12000047))
+head(GAMES)
+head(GAMES_DETAILS)
+```
+
+```{r}
+#Simplify Games Data
+ALL_GAMES=GAMES %>%
+            select(GAME_DATE_EST,GAME_ID,HOME_TEAM_ID,VISITOR_TEAM_ID,PTS_home,PTS_away) %>%
+            mutate(Spread=PTS_home-PTS_away,Total=PTS_home+PTS_away)
+head(ALL_GAMES)
+```
+
+```{r}
+#Obtain Aggregated OREB from Player Level Statistics
+OREB = GAMES_DETAILS %>%
+          select (TEAM_ABBREVIATION,GAME_ID,TEAM_ID,OREB) %>%
+          group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+          summarize(OREB=sum(OREB,na.rm=T)) %>%
+          ungroup()
+
+#Obtain Aggregated DREB from Player Level Statistics
+DREB = GAMES_DETAILS %>%
+          select (TEAM_ABBREVIATION,GAME_ID,TEAM_ID,DREB) %>%
+          group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+          summarize(DREB=sum(DREB,na.rm=T)) %>%
+          ungroup()
+
+#Obtain Aggregated REB from Player Level Statistics
+REB = GAMES_DETAILS %>%
+          select (TEAM_ABBREVIATION,GAME_ID,TEAM_ID,REB) %>%
+          group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+          summarize(REB=sum(REB,na.rm=T)) %>%
+          ungroup()
+
+#Obtain Aggregated AST from Player Level Statistics
+AST = GAMES_DETAILS %>%
+          select (TEAM_ABBREVIATION,GAME_ID,TEAM_ID,AST) %>%
+          group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+          summarize(AST=sum(AST,na.rm=T)) %>%
+          ungroup()
+
+#Obtain Aggregated STL from Player Level Statistics
+STL = GAMES_DETAILS %>%
+          select (TEAM_ABBREVIATION,GAME_ID,TEAM_ID,STL) %>%
+          group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+          summarize(STL=sum(STL,na.rm=T)) %>%
+          ungroup()
+
+#Obtain Aggregated BLK from Player Level Statistics
+BLK = GAMES_DETAILS %>%
+          select (TEAM_ABBREVIATION,GAME_ID,TEAM_ID,BLK) %>%
+          group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+          summarize(BLK=sum(BLK,na.rm=T)) %>%
+          ungroup()
+
+
+#Obtain Aggregated TO from Player Level Statistics
+TO = GAMES_DETAILS %>%
+          select (TEAM_ABBREVIATION,GAME_ID,TEAM_ID,TO) %>%
+          group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+          summarize(TO=sum(TO,na.rm=T)) %>%
+          ungroup()
+
+
+
+#Merging These Stats Into Game Data
+ALL_GAMES_DONE_1 = left_join(ALL_GAMES,select(OREB,-TEAM_ABBREVIATION),by=c("GAME_ID","HOME_TEAM_ID"="TEAM_ID")) %>%
+                    rename(OREB_home=OREB) %>%
+                    left_join(select(OREB,-TEAM_ABBREVIATION),by=c("GAME_ID","VISITOR_TEAM_ID"="TEAM_ID")) %>%
+                    rename(OREB_away=OREB) %>%
+                    mutate(OREB=OREB_home+OREB_away)
+
+ALL_GAMES_DONE_2 = left_join(ALL_GAMES_DONE_1,select(DREB,-TEAM_ABBREVIATION),by=c("GAME_ID","HOME_TEAM_ID"="TEAM_ID"))
+
+ALL_GAMES_DONE_3 = left_join(ALL_GAMES_DONE_2,select(REB,-TEAM_ABBREVIATION),by=c("GAME_ID","HOME_TEAM_ID"="TEAM_ID"))
+
+ALL_GAMES_DONE_4 = left_join(ALL_GAMES_DONE_3,select(AST,-TEAM_ABBREVIATION),by=c("GAME_ID","HOME_TEAM_ID"="TEAM_ID"))
+
+ALL_GAMES_DONE_5 = left_join(ALL_GAMES_DONE_4,select(STL,-TEAM_ABBREVIATION),by=c("GAME_ID","HOME_TEAM_ID"="TEAM_ID"))
+
+ALL_GAMES_DONE_6 = left_join(ALL_GAMES_DONE_5,select(BLK,-TEAM_ABBREVIATION),by=c("GAME_ID","HOME_TEAM_ID"="TEAM_ID"))
+
+ALL_GAMES_DONE_7 = left_join(ALL_GAMES_DONE_6,select(TO,-TEAM_ABBREVIATION),by=c("GAME_ID","HOME_TEAM_ID"="TEAM_ID"))
+
+  
+head(ALL_GAMES_DONE_7)
+
+#Creating Home Team and Away Team Variables
+ALL_TEAMS= TEAMS %>%
+            select(TEAM_ID,CITY,NICKNAME) %>%
+            unite(NAME,CITY,NICKNAME,sep=" ")
+head(ALL_TEAMS)
+
+#Merging Team Name into original data
+ALL_GAMES_DONE_AGAIN=left_join(ALL_GAMES_DONE_7,ALL_TEAMS,by=c("HOME_TEAM_ID"="TEAM_ID")) %>%
+                        rename("Home Team"=NAME) %>%
+                        left_join(ALL_TEAMS,by=c("VISITOR_TEAM_ID"="TEAM_ID")) %>%
+                        rename("Away Team"=NAME) %>%
+                        select(GAME_DATE_EST,"Home Team","Away Team",everything()) %>%
+                        select(-GAME_ID,-HOME_TEAM_ID,-VISITOR_TEAM_ID)
+head(ALL_GAMES_DONE_AGAIN)
+```
+
