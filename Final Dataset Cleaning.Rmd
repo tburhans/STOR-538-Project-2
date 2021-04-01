@@ -21,6 +21,7 @@ library(tidyr)
 GAMES<-read.csv(url('https://raw.githubusercontent.com/mattymo18/STOR-538-Project2-2021/master/Source-Data/games.csv'))
 GAMES_DETAILS<-read.csv(url('https://raw.githubusercontent.com/mattymo18/STOR-538-Project2-2021/master/Source-Data/games_details.csv'))
 TEAMS<-read.csv(url('https://raw.githubusercontent.com/mattymo18/STOR-538-Project2-2021/master/Source-Data/teams.csv'))
+PLAYERS<-read.csv(url('https://github.com/tburhans/STOR-538-Project-2/blob/aed1898950c1569dcf2711990d24fbcd51ab80cc/2020-2021%20NBA%20Stats%20%20Player%20Box%20Score%20%20Advanced%20Metrics.csv'))
 ```
 
 
