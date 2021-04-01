@@ -22,6 +22,8 @@ GAMES<-read.csv(url('https://raw.githubusercontent.com/mattymo18/STOR-538-Projec
 GAMES_DETAILS<-read.csv(url('https://raw.githubusercontent.com/mattymo18/STOR-538-Project2-2021/master/Source-Data/games_details.csv'))
 TEAMS<-read.csv(url('https://raw.githubusercontent.com/mattymo18/STOR-538-Project2-2021/master/Source-Data/teams.csv'))
 PLAYERS<-read.csv(url('https://raw.githubusercontent.com/tburhans/STOR-538-Project-2/main/2020-2021%20NBA%20Stats%20%20Player%20Box%20Score%20%20Advanced%20Metrics.csv'))
+colnames(PLAYERS) <- as.character(unlist(PLAYERS[1,])) # fix header
+PLAYERS = PLAYERS[-1, ]
 ```
 
 
