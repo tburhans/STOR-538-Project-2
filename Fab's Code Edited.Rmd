@@ -78,9 +78,9 @@ GAMES_DETAILS<- subset(GAMES_DETAILS, select = -MIN )
 names(GAMES_DETAILS)[28] <- "MIN"
 ```
 
-```{r}
-Below is the chunk of code that Mario gave us in class, changed a little bit so that it is for all of the games in the dataset. 
 
+Below is the chunk of code that Mario gave us in class, changed a little bit so that it is for all of the games in the dataset.
+```{r}
 ALL_GAMES=GAMES %>%
             select(GAME_YEAR, GAME_MONTH, GAME_DAY,GAME_ID,HOME_TEAM_ID,VISITOR_TEAM_ID,PTS_home,PTS_away) %>%
             mutate(Spread=PTS_home-PTS_away,Total=PTS_home+PTS_away)
@@ -142,7 +142,7 @@ FTA = GAMES_DETAILS %>%
 #Starter stats (sum)
 Starters_OREB = GAMES_DETAILS %>%
   select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, OREB) %>%
-  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
+  filter(GAMES_DETAILS$START_POSITION == 'B') %>%
   group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
   summarize(OREB=sum(OREB,na.rm=T)) %>%
   ungroup()
