@@ -1,0 +1,151 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+rm(list=ls())
+```
+
+```{r}
+#Install and Load RCurl Package
+library(curl)
+library(tidyverse)
+library(readr)
+library(dplyr)
+library(lubridate)
+library(tidyr)
+GAMES <- read.csv(url('https://raw.githubusercontent.com/tburhans/STOR-538-Project-2/main/Updated.csv'))
+GAMES_DETAILS<-read.csv(url('https://raw.githubusercontent.com/mattymo18/STOR-538-Project2-2021/master/Source-Data/games_details.csv'))
+```
+
+```{r}
+GAMES_DETAILS$COMMENT <- as.character(GAMES_DETAILS$COMMENT)
+is.character(GAMES_DETAILS$COMMENT)
+GAMES_DETAILS<-subset(GAMES_DETAILS, nchar(GAMES_DETAILS$COMMENT)==0)
+```
+```{r}
+GAMES_DETAILS$START_POSITION[GAMES_DETAILS$START_POSITION==""] <- NA
+
+GAMES_DETAILS$START_POSITION<-as.character(GAMES_DETAILS$START_POSITION)
+is.character(GAMES_DETAILS$START_POSITION)
+
+GAMES_DETAILS$START_POSITION[is.na(GAMES_DETAILS$START_POSITION)] <- 'B'
+```
+
+
+```{r}
+#Starter stats (sum)
+
+Starters_OREB = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, OREB) %>%
+  filter(GAMES_DETAILS$START_POSITION == 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(OREB=sum(OREB,na.rm=T)) %>%
+  ungroup()
+
+Starters_DREB = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, DREB) %>%
+  filter(GAMES_DETAILS$START_POSITION == 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(DREB=sum(DREB,na.rm=T)) %>%
+  ungroup()
+
+Starters_REB = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, REB) %>%
+  filter(GAMES_DETAILS$START_POSITION == 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(REB=sum(REB,na.rm=T)) %>%
+  ungroup()
+
+Starters_AST = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, AST) %>%
+  filter(GAMES_DETAILS$START_POSITION == 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(AST=sum(AST,na.rm=T)) %>%
+  ungroup()
+
+Starters_STL = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, STL) %>%
+  filter(GAMES_DETAILS$START_POSITION == 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(STL=sum(STL,na.rm=T)) %>%
+  ungroup()
+
+Starters_BLK  = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, BLK) %>%
+  filter(GAMES_DETAILS$START_POSITION == 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(BLK=sum(BLK,na.rm=T)) %>%
+  ungroup()
+
+Starters_TO = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, TO) %>%
+  filter(GAMES_DETAILS$START_POSITION == 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(TO=sum(TO,na.rm=T)) %>%
+  ungroup()
+
+
+```
+
+```{r}
+#Bench stats (sum)
+
+Bench_OREB = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, OREB) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(OREB=sum(OREB,na.rm=T)) %>%
+  ungroup()
+
+Bench_DREB = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, DREB) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(DREB=sum(DREB,na.rm=T)) %>%
+  ungroup()
+
+Bench_REB = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, REB) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(REB=sum(REB,na.rm=T)) %>%
+  ungroup()
+
+Bench_AST = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, AST) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(AST=sum(AST,na.rm=T)) %>%
+  ungroup()
+
+Bench_STL = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, STL) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(STL=sum(STL,na.rm=T)) %>%
+  ungroup()
+
+Bench_TO = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, TO) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(TO=sum(TO,na.rm=T)) %>%
+  ungroup()
+
+BenchBLK = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, BLK) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(BLK=sum(BLK,na.rm=T)) %>%
+  ungroup()
+```
+
+```{r}
+#Joining these into the main dataset
+
+GAMES_1 = left_join(GAMES_DETAILS,select(GAMES,-TEAM_ABBREVIATION),by=c("GAME_ID","TEAM_ID"))
+```
+
+
