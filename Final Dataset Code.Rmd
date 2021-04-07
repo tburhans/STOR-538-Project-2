@@ -79,6 +79,14 @@ names(GAMES_DETAILS)[28] <- "MIN"
 ```
 
 
+Below I am going to calculate eFG for each player in GAMES_DETAILS and then put this variable into our main dataset. To calculate eFG, the formula is (FGM+ (0.5 x 3PM))/FGA. 
+
+```{r}
+GAMES_DETAILS <- mutate(GAMES_DETAILS, eFG = (FGM+(0.5*FG3M))/FGA)
+head(GAMES_DETAILS)
+```
+
+
 Below is the chunk of code that Mario gave us in class, changed a little bit so that it is for all of the games in the dataset.
 ```{r}
 ALL_GAMES=GAMES %>%
@@ -138,49 +146,69 @@ FTA = GAMES_DETAILS %>%
           group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
           summarize(FTA=sum(FTA,na.rm=T)) %>%
           ungroup()
+#Obtain Aggregated eFG from Player Level Statistics
+eFG = GAMES_DETAILS %>%
+          select (TEAM_ABBREVIATION,GAME_ID,TEAM_ID,eFG) %>%
+          group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+          summarize(eFG=sum(eFG,na.rm=T)) %>%
+          ungroup()
 
 #Starter stats (sum)
-Starters_OREB = STARTERS_DETAILS %>%
+Starters_OREB = GAMES_DETAILS %>%
   select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, OREB) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
   group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
   summarize(OREB=sum(OREB,na.rm=T)) %>%
   rename(OREB_starters = OREB) %>%
   ungroup()
-Starters_DREB = STARTERS_DETAILS %>%
+Starters_DREB = GAMES_DETAILS %>%
   select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, DREB) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
   group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
   summarize(DREB=sum(DREB,na.rm=T)) %>%
   rename(DREB_starters = DREB) %>%
   ungroup()
-Starters_REB = STARTERS_DETAILS %>%
+Starters_REB = GAMES_DETAILS %>%
   select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, REB) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
   group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
   summarize(REB=sum(REB,na.rm=T)) %>%
   rename(REB_starters = REB) %>%
   ungroup()
-Starters_AST = STARTERS_DETAILS %>%
+Starters_AST = GAMES_DETAILS %>%
   select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, AST) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
   group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
   summarize(AST=sum(AST,na.rm=T)) %>%
   rename(AST_starters = AST) %>%
   ungroup()
-Starters_STL = STARTERS_DETAILS %>%
+Starters_STL = GAMES_DETAILS %>%
   select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, STL) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
   group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
   summarize(STL=sum(STL,na.rm=T)) %>%
   rename(STL_starters = STL) %>%
   ungroup()
-Starters_BLK  = STARTERS_DETAILS %>%
+Starters_BLK  = GAMES_DETAILS %>%
   select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, BLK) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
   group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
   summarize(BLK=sum(BLK,na.rm=T)) %>%
   rename(BLK_starters = BLK) %>%
   ungroup()
-Starters_TO = STARTERS_DETAILS %>%
+Starters_TO = GAMES_DETAILS %>%
   select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, TO) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
   group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
   summarize(TO=sum(TO,na.rm=T)) %>%
   rename(TO_starters = TO) %>%
+  ungroup()
+Starters_eFG = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, eFG) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(eFG=sum(eFG,na.rm=T)) %>%
+  rename(eFG_starters = eFG) %>%
   ungroup()
 
 #Bench stats (sum)
@@ -233,6 +261,14 @@ Bench_BLK = GAMES_DETAILS %>%
   summarize(BLK=sum(BLK,na.rm=T)) %>%
   rename(BLK_bench = BLK) %>%
   ungroup()
+Bench_eFG = GAMES_DETAILS %>%
+  select(TEAM_ABBREVIATION, GAME_ID, TEAM_ID, eFG) %>%
+  filter(GAMES_DETAILS$START_POSITION != 'B') %>%
+  group_by(TEAM_ABBREVIATION,GAME_ID,TEAM_ID) %>%
+  summarize(eFG=sum(eFG,na.rm=T)) %>%
+  rename(eFG_bench = eFG) %>%
+  ungroup()
+
 ```
 
 ```{r}
@@ -357,12 +393,30 @@ ALL_GAMES_DONE_23 = left_join(ALL_GAMES_DONE_22,select(Bench_TO,-TEAM_ABBREVIATI
                     rename(TO_Bench_away=TO_bench) %>%
                     mutate(Bench_TO=TO_Bench_home+TO_Bench_away)
 
+
+ALL_GAMES_DONE_24 = left_join(ALL_GAMES_DONE_23,select(eFG,-TEAM_ABBREVIATION),by=c("GAME_ID","HOME_TEAM_ID"="TEAM_ID")) %>%
+                    rename(eFG_home=eFG) %>%
+                    left_join(select(eFG,-TEAM_ABBREVIATION),by=c("GAME_ID","VISITOR_TEAM_ID"="TEAM_ID")) %>%
+                    rename(eFG_away=eFG) %>%
+                    mutate(eFG=eFG_home+eFG_away)
+ALL_GAMES_DONE_25 = left_join(ALL_GAMES_DONE_24,select(Starters_eFG,-TEAM_ABBREVIATION),by=c("GAME_ID","HOME_TEAM_ID"="TEAM_ID")) %>%
+                    rename(eFG_Starters_home=eFG_starters) %>%
+                    left_join(select(Starters_eFG,-TEAM_ABBREVIATION),by=c("GAME_ID","VISITOR_TEAM_ID"="TEAM_ID")) %>%
+                    rename(eFG_Starters_away=eFG_starters) %>%
+                    mutate(Starters_eFG=eFG_Starters_home+eFG_Starters_away)
+ALL_GAMES_DONE_26 = left_join(ALL_GAMES_DONE_25,select(Bench_eFG,-TEAM_ABBREVIATION),by=c("GAME_ID","HOME_TEAM_ID"="TEAM_ID")) %>%
+                    rename(eFG_Bench_home=eFG_bench) %>%
+                    left_join(select(Bench_eFG,-TEAM_ABBREVIATION),by=c("GAME_ID","VISITOR_TEAM_ID"="TEAM_ID")) %>%
+                    rename(eFG_Bench_away=eFG_bench) %>%
+                    mutate(Bench_eFG=eFG_Bench_home+eFG_Bench_away)
+
+
 #Creating Home Team and Away Team Variables
 ALL_TEAMS= TEAMS %>%
             select(TEAM_ID,CITY,NICKNAME) %>%
             unite(NAME,CITY,NICKNAME,sep=" ")
 #Merging Team Name into original data
-ALL_GAMES_DONE_AGAIN=left_join(ALL_GAMES_DONE_23,ALL_TEAMS,by=c("HOME_TEAM_ID"="TEAM_ID")) %>%
+ALL_GAMES_DONE_AGAIN=left_join(ALL_GAMES_DONE_26,ALL_TEAMS,by=c("HOME_TEAM_ID"="TEAM_ID")) %>%
                         rename("Home Team"=NAME) %>%
                         left_join(ALL_TEAMS,by=c("VISITOR_TEAM_ID"="TEAM_ID")) %>%
                         rename("Away Team"=NAME) %>%
@@ -399,4 +453,6 @@ ALL_GAMES_DONE_AGAIN<-mutate(ALL_GAMES_DONE_AGAIN, Home_Possesions= (FGA_home-OR
 head(ALL_GAMES_DONE_AGAIN)
 write.csv(ALL_GAMES_DONE_AGAIN,"C:\\Users\\Fabryce\\Desktop\\Updated.csv", row.names = FALSE)
 ```
+
+
 
