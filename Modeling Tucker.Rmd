@@ -1,0 +1,84 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(readxl)
+library(randomForest)
+library(glmnet)
+```
+
+```{r}
+head(FINAL_DATASET)
+
+Dataset_2014 = subset(FINAL_DATASET, GAME_YEAR == 2014)
+Dataset_2015 = subset(FINAL_DATASET, GAME_YEAR == 2015)
+Dataset_2016 = subset(FINAL_DATASET, GAME_YEAR == 2016)
+Dataset_2017 = subset(FINAL_DATASET, GAME_YEAR == 2017)
+Dataset_2018 = subset(FINAL_DATASET, GAME_YEAR == 2018)
+Dataset_2019 = subset(FINAL_DATASET, GAME_YEAR == 2019)
+Dataset_2020 = subset(FINAL_DATASET, GAME_YEAR == 2020)
+
+DataSet_TOTAL_2014 <- Dataset_2014[,-c(1,2,3,4,5,6,7)]
+DataSet_TOTAL_2015 <- Dataset_2015[,-c(1,2,3,4,5,6,7)]
+DataSet_TOTAL_2016 <- Dataset_2016[,-c(1,2,3,4,5,6,7)]
+DataSet_TOTAL_2017 <- Dataset_2017[,-c(1,2,3,4,5,6,7)]
+DataSet_TOTAL_2018 <- Dataset_2018[,-c(1,2,3,4,5,6,7)]
+DataSet_TOTAL_2019 <- Dataset_2019[,-c(1,2,3,4,5,6,7)]
+TestingDataset <- Dataset_2020[,-c(1,2,3,4,5,6,7)]
+
+
+df<- subset(FINAL_DATASET, GAME_YEAR>=2014)
+df2 <- subset(df, GAME_YEAR<2020)
+TrainingDataSet <- df2[,-c(1,2,3,4,5,6,7)]
+
+head(TrainingDataSet)
+head(TestingDataset, n=50)
+```
+
+
+```{r}
+# Create a Random Forest model with default parameters
+model1 <- randomForest(Total ~ ., data = TrainingDataSet, importance = TRUE,proximity=TRUE,oob.prox=TRUE)
+model1
+```
+
+```{r}
+predTrain <- predict(model1, TrainingDataSet)
+predTrain
+```
+
+```{r}
+predTest <- predict(model1,TestingDataset)
+predTest
+```
+
+```{r}
+summary(model1)
+```
+
+
+
+
+
+
+OREB
+
+```{r}
+# Create a Random Forest model with default parameters
+model2 <- randomForest(OREB ~ ., data = TrainingDataSet, importance = TRUE,proximity=TRUE,oob.prox=TRUE)
+model2
+```
+
+```{r}
+predTrain2 <- predict(model2, TrainingDataSet)
+predTrain2
+```
+
+```{r}
+predTest2 <- predict(model2,TestingDataset)
+predTest2
+```
