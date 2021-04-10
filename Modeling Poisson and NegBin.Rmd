@@ -1,0 +1,107 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+head(FINAL_DATASET)
+
+Dataset_2014 = subset(FINAL_DATASET, GAME_YEAR == 2014)
+Dataset_2015 = subset(FINAL_DATASET, GAME_YEAR == 2015)
+Dataset_2016 = subset(FINAL_DATASET, GAME_YEAR == 2016)
+Dataset_2017 = subset(FINAL_DATASET, GAME_YEAR == 2017)
+Dataset_2018 = subset(FINAL_DATASET, GAME_YEAR == 2018)
+Dataset_2019 = subset(FINAL_DATASET, GAME_YEAR == 2019)
+Dataset_2020 = subset(FINAL_DATASET, GAME_YEAR == 2020)
+
+DataSet_TOTAL_2014 <- Dataset_2014[,-c(1,2,3,4,5,6,7)]
+DataSet_TOTAL_2015 <- Dataset_2015[,-c(1,2,3,4,5,6,7)]
+DataSet_TOTAL_2016 <- Dataset_2016[,-c(1,2,3,4,5,6,7)]
+DataSet_TOTAL_2017 <- Dataset_2017[,-c(1,2,3,4,5,6,7)]
+DataSet_TOTAL_2018 <- Dataset_2018[,-c(1,2,3,4,5,6,7)]
+DataSet_TOTAL_2019 <- Dataset_2019[,-c(1,2,3,4,5,6,7)]
+TestingDataset <- Dataset_2020[,-c(1,2,3,4,5,6,7)]
+
+
+df<- subset(FINAL_DATASET, GAME_YEAR>=2014)
+df2 <- subset(df, GAME_YEAR<2020)
+TrainingDataSet <- df2[,-c(1,2,3,4,5,6,7)]
+
+head(TrainingDataSet)
+head(TestingDataset, n=50)
+```
+
+
+looking at the mean and variance and then the negative binomial regression. the plots are looking wack tho
+```{r}
+mean(TrainingDataSet$Total)
+var(TrainingDataSet$Total)
+library(MASS)
+predictNBin = glm.nb(Total~., data = TrainingDataSet)
+#exp(predict(predictNBin,TestingDataset))
+
+summary(predictNBin)
+plot(predictNBin)
+```
+
+looking at poisson models for total for each year 2014-2020
+```{r}
+PoisModTotal2014 = glm(Total ~ ., data = DataSet_TOTAL_2014, family = poisson(link = "log"))
+#summary(PoisModTotal2014)
+PoisModTotal2015 = glm(Total ~ ., data = DataSet_TOTAL_2015, family = poisson(link = "log"))
+#summary(PoisModTotal2015)
+PoisModTotal2016 = glm(Total ~ ., data = DataSet_TOTAL_2016, family = poisson(link = "log"))
+#summary(PoisModTotal2016)
+PoisModTotal2017 = glm(Total ~ ., data = DataSet_TOTAL_2017, family = poisson(link = "log"))
+#summary(PoisModTotal2017)
+PoisModTotal2018 = glm(Total ~ ., data = DataSet_TOTAL_2018, family = poisson(link = "log"))
+#summary(PoisModTotal2018)
+PoisModTotal2019 = glm(Total ~ ., data = DataSet_TOTAL_2019, family = poisson(link = "log"))
+#summary(PoisModTotal2019)
+PoisModTotal2020 = glm(Total ~ ., data = DataSet_TOTAL_2020, family = poisson(link = "log"))
+summary(PoisModTotal2020)
+```
+
+
+building the poisson model for total
+```{r}
+poisson_model1 = glm(Total ~ ., data = TestingDataSet, family = poisson(link = "log"))
+#summary(poisson_model1)
+
+PoisMod1_total = glm(Total ~ OREB_home + OREB_away + TO_home + TO_away + FGA_home + FGA_away + FTA_home + FTA_away + Home_Points_Per_Possesion + Away_Points_Per_Possesion, data = TestingDataSet, family = "poisson")
+summary(PoisMod1_total)
+
+PoisMod2_total = glm(Total ~ OREB_home + OREB_away + TO_home + TO_away + FGA_home + FGA_away + FTA_home + FTA_away + Home_Points_Per_Possesion + Away_Points_Per_Possesion, data = TestingDataSet, family = "quasipoisson")
+summary(PoisMod2_total)
+```
+
+
+exponentiate coefficients to make up for link = log
+```{r}
+PoisMod1_total$coefficients <- exp(PoisMod1_total$coefficients)
+summary(PoisMod1_total)
+PoisMod2_total$coefficients <- exp(PoisMod2_total$coefficients)
+summary(PoisMod2_total)
+```
+
+
+
+looking at the predictions here... looks a little high
+```{r}
+pois_predict_total <- predict(PoisMod1_total,TestingDataSet)
+pois_predict_total
+pois_predict_total2 <- predict(PoisMod2_total,TestingDataSet)
+#pois_predict_total2
+```
+
+
+
+OREB
+```{r}
+poisson_model2 = glm(OREB ~ ., data = TestingDataSet, family = poisson(link = "log"))
+summary(poisson_model2)
+```
+
+
+
+
