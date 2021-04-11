@@ -1,0 +1,214 @@
+---
+title: "cross-validation"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(caret)
+library(tidyverse)
+library(randomForest)
+library(neuralnet)
+library(Metrics)
+library(MASS)
+library(glmnet)
+library(rpart)
+```
+
+```{r}
+#reading in data
+data <- read_csv(file= 'FinalDataset.csv') %>% subset(GAME_YEAR>=2014)
+#data <- data[, -c(1,2,3,4,5,10,11, 13, 14, 15, 16, 17, 18)]
+data <- data[, -c(1,2,3,4,5,6,7)]
+head(data)
+
+```
+Model Building here
+```{r}
+
+#split into training and testing based on 80-20 split
+set.seed(5)
+trn_index = sample(nrow(data), size=0.8*nrow(data))
+trn = data[trn_index, ]
+tst = data[-trn_index, ]
+```
+
+```{r}
+#Lasso Regression
+#for predicting Total
+
+```
+
+```{r}
+#random forest
+#for OREB
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+backwards_poisson_model_oreb = glm(OREB ~ PTS_away + TO_home + TO_away + FGA_home + FGA_away + FTA_home + FTA_away + Home_Possesions + Away_Possesions + Home_Points_Per_Possesion + Home_OREB_Percentage + Away_OREB_Percentage + Away_DREB_Percentage, data=trn_model, family= "poisson")
+
+backwards_quasipoisson_model_oreb = glm(OREB ~ PTS_away + TO_home + TO_away + FGA_home + FGA_away + FTA_home + FTA_away + Home_Possesions + Away_Possesions + Home_Points_Per_Possesion + Home_OREB_Percentage + Away_OREB_Percentage + Away_DREB_Percentage, data=trn_model, family= "quasipoisson")
+
+neg_bin_model_oreb = glm.nb(OREB~., data=trn)
+
+rf_model_oreb = randomForest(OREB~., data=trn)
+
+
+model_backwards_poisson_total = glm(Total ~ OREB_home + OREB_away + TO_home + TO_away + FGA_home + FGA_away + FTA_home + FTA_away + Home_Points_Per_Possesion + Away_Points_Per_Possesion, data=trn_model, family="poisson")
+
+
+
+
+```
+
+
+
+This code splits our entire dataset into training and testing data randomly with an 80-20 split of training to testing. Then, it performs k-fold cross-validation (right now k=5). This means that it takes our training dataset, splits it into k chunks, and performs k folds or iterations. Within each fold, it will designate k-1 of these chunks as estimation data, to which it fits a model. One of the chunks will be the validation data. Then, it determines the RMSE of the model's predictions on the validation data. This is done k times for each fold, where each fold has a different validation dataset and different evaluation dataset. Each chunk gets used for validation exactly once. 
+
+Used the caret libraries createFolds function to determine the indexes of the validation data (called the fold_idx) for each fold. This means that fold 1's validation data is different from fold 2's validation data, which is different from fold 3's validation data, etc. Then, the calculate_rmse_single_fold function takes each unique fold validation dataset and estimation dataset, fits the model on the estimation set, predicts on the validation set, and calculates the RMSE of the predictions. Then, the RMSE's of the k-folds are averaged. 
+
+
+RMSE's of the models using k-fold (have to set Seed if want to reproduce results):
+
+SPREAD:
+LM w Backwards Elim (Fab) = 0.8537747
+LASSO (Raj) = 0.8989422
+RF (Rajee) = 3.454581
+
+TOTAL:
+LASSO (Raj) = 1.105374
+Poisson (Lex) = 1.216675
+Poisson (Tucker) = 1.241033 
+Quasipoisson (Tucker) = 1.241033
+Negative Binomial (Tucker) = 1.356194
+LASSO w Poisson (Raj) = 1.363492
+Random Forest (Tucker) = 3.904634
+Neural Net (Lex) = 210.83
+
+OREB:
+LASSO (Raj) = 0.1463802
+Negative Binomial w Backwards Elim (Raj) = 0.8846661
+LASSO w Poisson = 0.9980644
+Poisson w Backwards Elim (Raj) = 1.008639
+Quasipoisson w Backwards Elim (Raj) = 1.008639
+Random Forest (Raj) = 1.716421
+
+
+```{r}
+###K-Fold for Models except Lasso
+
+#caret create folds
+fold_idx = createFolds(trn$Total, k = 5)
+
+calculate_rmse_single_fold = function(val_idx) {
+  #splitting into estimation and validation within current fold
+  est=trn[-val_idx, ]
+  val=trn[val_idx, ]
+  
+  #fitting model with est
+  mod = glm(OREB ~ PTS_away + TO_home + TO_away + FGA_home + FGA_away + FTA_home + FTA_away + Home_Possesions + Away_Possesions + Home_Points_Per_Possesion + Home_OREB_Percentage + Away_OREB_Percentage + Away_DREB_Percentage, data=est, family= "poisson")
+  
+  #making predictions with val
+  pred = predict(mod, val, type="response")
+  
+  #calculating RMSE
+  #sqrt(mean((pred-val$Total) ^ 2))
+  rmse(val$Total, pred)
+  
+}
+
+results = sapply(fold_idx, calculate_rmse_single_fold)
+results
+mean(results)
+
+#checking on testing dataset
+mod2 = glm(OREB ~ PTS_away + TO_home + TO_away + FGA_home + FGA_away + FTA_home + FTA_away + Home_Possesions + Away_Possesions + Home_Points_Per_Possesion + Home_OREB_Percentage + Away_OREB_Percentage + Away_DREB_Percentage, data=trn, family= "poisson")
+pred2 = predict(mod2, tst, type="response")
+rmse(tst$Total, pred2)
+
+
+```
+
+```{r}
+###LASSO K FOLD
+
+#caret create folds
+fold_idx_lasso = createFolds(trn$Spread, k =5)
+
+lasso_calculate_rmse_single_fold = function(val_idx_lasso) {
+  #splitting into estimation and validation within current fold
+  est_lasso = trn[-val_idx_lasso, ]
+  val_lasso = trn[val_idx_lasso, ]
+  
+  #lasso split into x and y
+  x_trn <- model.matrix(Spread~., est_lasso)[,-1]
+  x_tst <- model.matrix(Spread~., val_lasso)[,-1]
+
+  y_trn <- est_lasso$Spread
+  y_tst <- val_lasso$Spread
+  
+  #cv to find min lambda
+  set.seed(5)
+  cv.lasso <- cv.glmnet(x_trn, y_trn, alpha=1)
+  minlambda = cv.lasso$lambda.min
+  
+  #fitting model
+  lasso_model = glmnet(x_trn, y_trn, alpha=1, lambda=minlambda)
+  
+  #making predictions
+  lasso_pred <- predict(lasso_model, newx=x_tst)
+  
+  #calcualting RMSE
+  rmse(y_tst, lasso_pred)
+  
+  
+}
+
+results = sapply(fold_idx_lasso, lasso_calculate_rmse_single_fold)
+results
+mean(results)
+```
+
+```{r}
+
+bestmodel1 = lm(Spread~OREB_home + OREB_away + DREB_home + DREB_away + 
+    AST_home + AST_away + STL_home + BLK_home + BLK_away + TO_home + 
+    TO_away + FGA_home + FGA_away + FTA_home + FTA_away + OREB_Starters_home + 
+    DREB_Starters_home + AST_Starters_away + STL_Starters_away + 
+    BLK_Starters_home + Home_Points_Per_Possesion + Away_Points_Per_Possesion + 
+    Home_Turnover_Percentage + Away_Turnover_Percentage + Home_OREB_Percentage + 
+    Away_OREB_Percentage + Away_DREB_Percentage + Home_AST_TO_Ratio + 
+    Away_AST_TO_Ratio, data=trn)
+nets_home<- subset(trn, data$`Home Team`=='Brooklyn Nets' & data$`Away Team` == 'Los Angeles Lakers')
+nets_home
+x<- colMeans(nets_home[sapply(nets_home, is.numeric)], na.rm = TRUE)
+x<-as.data.frame(t(x))
+x<-x[,-c(3)]
+x
+predict(bestmodel1, x)
+head(predict)
+
+find_averages = function(team, years) {
+  dataset = subset(data, GAME_YEAR >= years)
+  avgs<- subset(dataset, `Home Team` == team)
+  x<- colMeans(avgs[sapply(avgs, is.numeric)], na.rm = TRUE)
+  x<-as.data.frame(t(x))
+  #x<-x[,-c(3)]
+  return (x)
+}
+
+find_averages('Brooklyn Nets', 2019)
+
+```
