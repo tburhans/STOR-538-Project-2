@@ -179,36 +179,115 @@ lasso_calculate_rmse_single_fold = function(val_idx_lasso) {
 results = sapply(fold_idx_lasso, lasso_calculate_rmse_single_fold)
 results
 mean(results)
+
+x_trn_whole <- model.matrix(Total~., trn)[,-1]
+x_tst_whole <- model.matrix(Total~., tst)[,-1]
+
+y_trn_whole <- trn$Total
+y_tst_whole <- tst$Total
+
+set.seed(5)
+cv.lasso.whole <- cv.glmnet(x_trn_whole, y_trn_whole, alpha=1)
+minlambda.whole = cv.lasso.whole$lambda.min
+
+lasso_model = glmnet(x_trn_whole, y_trn_whole, alpha=1, lambda=minlambda.whole)
+
+coef(lasso_model)
+
+
+
 ```
 
 ```{r}
+###get predictions dataset
+predictions <- read.csv(url('https://raw.githubusercontent.com/SuperMarioGiacomazzo/STOR538_WEBSITE/master/Playoffs/Round%202/Predictions.csv'))2
+```
 
-bestmodel1 = lm(Spread~OREB_home + OREB_away + DREB_home + DREB_away + 
+```{r}
+### Function to take in values from predictions dataset, and average every teams statistics
+final_data_full <- read.csv(file='FinalDataset.csv')
+final_data_full
+
+find_averages = function(home_team, away_team, years, predictor) {
+  #subsetting based on year
+  dataset = subset(final_data_full, GAME_YEAR >= years)
+  
+  #subsetting based on home team and away team
+  home_games <- subset(dataset, dataset$`Home.Team` == home_team)
+  away_games <- subset(dataset, dataset$`Away.Team` == away_team)
+  
+  #subsetting columns based on predictor to get only the 
+  #regressors we need
+  if (predictor == 'Spread' | predictor == 'Total') {
+    home_games <- home_games[, -c(1,2,3,4,5,6,7)]
+    away_games <- away_games[, -c(1,2,3,4,5,6,7)]
+  } else {
+    home_games <- home_games[, -c(1,2,3,4,5,10,11, 13, 14, 15, 16, 17, 18)]
+    away_games <- away_games[, -c(1,2,3,4,5,10,11, 13, 14, 15, 16, 17, 18)]
+  }
+
+  #taking averages
+  x<- colMeans(home_games[sapply(home_games, is.numeric)], na.rm = TRUE)
+  x<-as.data.frame(t(x))
+  
+  y<- colMeans(away_games[sapply(away_games, is.numeric)], na.rm = TRUE)
+  y <- as.data.frame(t(y))
+  
+  ###Tucker Start here to pick and choose the appropriate stats from home or away
+  ### and put into another dataframe potentially
+  #x <- x[, c(10, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 43, )]
+}
+
+find_averages_only_home = function(home_team, years, predictor) {
+  #subsetting based on year
+  dataset = subset(final_data_full, GAME_YEAR >= years)
+  
+  #subsetting based on home team
+  home_games <- subset(dataset, dataset$`Home.Team` == home_team)
+  
+  #subsetting columns based on predictor to get only the 
+  #regressors we need
+  if (predictor == 'Spread' | predictor == 'Total') {
+    home_games <- home_games[, -c(1,2,3,4,5,6,7)]
+  } else {
+    home_games <- home_games[, -c(1,2,3,4,5,10,11, 13, 14, 15, 16, 17, 18)]
+  }
+  
+  #taking averages
+  x<- colMeans(home_games[sapply(home_games, is.numeric)], na.rm = TRUE)
+  x<-as.data.frame(t(x))
+  return (x)
+}
+
+#training our model first
+##decision to make: should we train on all data or just past 2 years??
+# right now training on all data since 2019
+
+best_model_spread <- lm(Spread~OREB_home + OREB_away + DREB_home + DREB_away + 
     AST_home + AST_away + STL_home + BLK_home + BLK_away + TO_home + 
     TO_away + FGA_home + FGA_away + FTA_home + FTA_away + OREB_Starters_home + 
     DREB_Starters_home + AST_Starters_away + STL_Starters_away + 
     BLK_Starters_home + Home_Points_Per_Possesion + Away_Points_Per_Possesion + 
     Home_Turnover_Percentage + Away_Turnover_Percentage + Home_OREB_Percentage + 
     Away_OREB_Percentage + Away_DREB_Percentage + Home_AST_TO_Ratio + 
-    Away_AST_TO_Ratio, data=trn)
-nets_home<- subset(trn, data$`Home Team`=='Brooklyn Nets' & data$`Away Team` == 'Los Angeles Lakers')
-nets_home
-x<- colMeans(nets_home[sapply(nets_home, is.numeric)], na.rm = TRUE)
-x<-as.data.frame(t(x))
-x<-x[,-c(3)]
-x
-predict(bestmodel1, x)
-head(predict)
+    Away_AST_TO_Ratio, data = trn)
 
-find_averages = function(team, years) {
-  dataset = subset(data, GAME_YEAR >= years)
-  avgs<- subset(dataset, `Home Team` == team)
-  x<- colMeans(avgs[sapply(avgs, is.numeric)], na.rm = TRUE)
-  x<-as.data.frame(t(x))
-  #x<-x[,-c(3)]
-  return (x)
+#this loops through the predictions dataset, grabs each home and away matchup, sends it through
+#our function to find averages, and predicts using our best model on the averages
+
+for (i in 1:nrow(predictions)) {
+  #get current row's home and away
+  row <- predictions[i, ]
+  home <- row[, 2]
+  away <- row[, 3]
+  
+  #send to function to find the averages
+  avgs <- find_averages_only_home(home, 2019, 'Spread')
+  ##predict using our model 
+  results <- predict(best_model_spread, avgs)
+  predictions[i, 4] = results
 }
 
-find_averages('Brooklyn Nets', 2019)
+predictions
 
 ```
