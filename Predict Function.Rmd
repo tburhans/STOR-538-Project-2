@@ -7,25 +7,24 @@ output: html_notebook
 ###get predictions dataset
 predictions <- read.csv(url('https://raw.githubusercontent.com/SuperMarioGiacomazzo/STOR538_WEBSITE/master/Playoffs/Round%202/Predictions.csv'))
 head(predictions)
-head(FINAL_DATASET)
+#head(FINAL_DATASET)
 
-example = merge(TEAMS,FINAL_DATASET)
-head(example)
+#example = merge(TEAMS,FINAL_DATASET)
+#head(example)
 ```
 
 ```{r}
 ### Function to take in values from predictions dataset, and average every teams statistics
-#final_data_full <- read.csv(file='FinalDataset.csv')
-#final_data_full
+final_data_full <- read.csv(file='FinalDataset.csv')
+final_data_full
+
 find_averages = function(home_team, away_team, years, predictor) {
   #subsetting based on year
-  dataset = subset(FINAL_DATASET, GAME_YEAR >= years)
+  dataset = subset(final_data_full, GAME_YEAR >= years)
   
   #subsetting based on home team and away team
-  home_games <- subset(dataset, dataset$`Home Team` == home_team)
-  away_games <- subset(dataset, dataset$`Away Team` == away_team)
-  print(home_games)
-  print(away_games)
+  home_games <- subset(dataset, dataset$`Home.Team` == home_team)
+  away_games <- subset(dataset, dataset$`Away.Team` == away_team)
   
   #subsetting columns based on predictor to get only the 
   #regressors we need
@@ -36,19 +35,15 @@ find_averages = function(home_team, away_team, years, predictor) {
     home_games <- home_games[, c(1,6,10,19,22,25,28,31,34,37,40,43,46,49,52,55,58,61,64,67,70,73,76,79,82,84,86,88,90,92)]
     away_games <- away_games[, c(2,7,11,20,23,26,29,32,35,38,41,44,47,50,53,56,59,62,65,68,71,74,77,80,83,85,87,89,91,93)]
   }
-  print(home_games)
-  print(away_games)
+
   #taking averages
   x<- colMeans(home_games[sapply(home_games, is.numeric)], na.rm = TRUE)
   x<-as.data.frame(t(x))
-  print(x)
   
   y<- colMeans(away_games[sapply(away_games, is.numeric)], na.rm = TRUE)
   y <- as.data.frame(t(y))
-  print(y)
   
   z <- merge(x,y)
-  print(z)
   
   z$Spread <- z$`PTS_home` - z$`PTS_away`
   z$Total <- z$`PTS_home` + z$`PTS_away`
@@ -83,7 +78,6 @@ find_averages = function(home_team, away_team, years, predictor) {
   if (predictor == 'OREB') {
     z <- z[, -c(`OREB_home`,`OREB_away`)]
   }
-  print(z)
   return (z)
 }
   
@@ -111,9 +105,10 @@ find_averages_only_home = function(home_team, years, predictor) {
   x<-as.data.frame(t(x))
   return (x)
 }
-#training our model first
+
+#training our models first
 ##decision to make: should we train on all data or just past 2 years??
-# right now training on all data since 2019
+# right now training on all data since 2014
 best_model_spread <- lm(Spread~OREB_home + OREB_away + DREB_home + DREB_away + 
     AST_home + AST_away + STL_home + BLK_home + BLK_away + TO_home + 
     TO_away + FGA_home + FGA_away + FTA_home + FTA_away + OREB_Starters_home + 
@@ -122,6 +117,26 @@ best_model_spread <- lm(Spread~OREB_home + OREB_away + DREB_home + DREB_away +
     Home_Turnover_Percentage + Away_Turnover_Percentage + Home_OREB_Percentage + 
     Away_OREB_Percentage + Away_DREB_Percentage + Home_AST_TO_Ratio + 
     Away_AST_TO_Ratio, data = trn)
+
+
+x_trn_whole_total <- model.matrix(Total~., trn)[,-1]
+y_trn_whole_total <- trn$Total
+
+
+set.seed(5)
+cv.lasso.whole <- cv.glmnet(x_trn_whole_total, y_trn_whole_total, alpha=1)
+minlambda.whole = cv.lasso.whole$lambda.min
+best_model_total = glmnet(x_trn_whole_total, y_trn_whole_total, alpha=1, lambda=minlambda.whole)
+
+x_trn_whole_oreb <- model.matrix(OREB~., trn)[,-1]
+y_trn_whole_oreb <- trn$OREB
+
+set.seed(5)
+cv.lasso.whole.oreb <- cv.glmnet(x_trn_whole_oreb, y_trn_whole_oreb, alpha=1)
+minlambda.whole.oreb = cv.lasso.whole.oreb$lambda.min
+best_model_oreb = glmnet(x_trn_whole_oreb, y_trn_whole_oreb, alpha=1, lambda=minlambda.whole.oreb)
+
+
 #this loops through the predictions dataset, grabs each home and away matchup, sends it through
 #our function to find averages, and predicts using our best model on the averages
 for (i in 1:nrow(predictions)) {
@@ -132,14 +147,26 @@ for (i in 1:nrow(predictions)) {
   
   #send to function to find the averages
   avgs <- find_averages(home, away, 2019, 'Spread')
-  print(avgs)
   ##predict using our model 
   results <- predict(best_model_spread, avgs)
-  #predictions[i, 4] = results
+  predictions[i, 4] = results
+  
+  avgs2 <- find_averages(home, away, 2019, 'Total')
+  avgs2_x <- model.matrix(Total~., avgs2)[,-1]
+  avgs2_x <- t(avgs2_x)
+  results2 <- predict(best_model_total, newx=avgs2_x)
+  predictions[i, 5] = results2
+  
+  avgs3 <- find_averages(home, away, 2019, 'OREB')
+  avgs3_x <- model.matrix(OREB~., avgs3)[,-1]
+  avgs3_x <- t(avgs3_x)
+  results3 <- predict(best_model_oreb, newx=avgs3_x)
+  predictions[i, 6] = results3
 }
 
-find_averages("Brooklyn Nets", "Los Angeles Lakers", 2019, 'Spread')
-
+debugging <- find_averages('Brooklyn Nets', 'Los Angeles Lakers', 2019, 'Total')
+debugging
+ncol(debugging)
 predictions
 ```
 

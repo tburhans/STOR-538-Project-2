@@ -22,7 +22,7 @@ library(rpart)
 ```{r}
 #reading in data
 data <- read_csv(file= 'FinalDataset.csv') %>% subset(GAME_YEAR>=2014)
-#data <- data[, -c(1,2,3,4,5,10,11, 13, 14, 15, 16, 17, 18)]
+data2 <- data[, -c(1,2,3,4,5,10,11, 13, 14, 15, 16, 17, 18)]
 data <- data[, -c(1,2,3,4,5,6,7)]
 head(data)
 
@@ -35,6 +35,11 @@ set.seed(5)
 trn_index = sample(nrow(data), size=0.8*nrow(data))
 trn = data[trn_index, ]
 tst = data[-trn_index, ]
+
+set.seed(6)
+trn_index_oreb = sample(nrow(data2), size=0.8*nrow(data2))
+trn_oreb = data2[trn_index_oreb, ]
+tst_oreb = data2[-trn_index_oreb, ]
 ```
 
 ```{r}
@@ -180,27 +185,32 @@ results = sapply(fold_idx_lasso, lasso_calculate_rmse_single_fold)
 results
 mean(results)
 
-x_trn_whole <- model.matrix(Total~., trn)[,-1]
-x_tst_whole <- model.matrix(Total~., tst)[,-1]
+head(trn_oreb)
+lasso_x_trn <- model.matrix(OREB~., trn_oreb)[,-1]
+lasso_x_tst <- model.matrix(OREB~., tst_oreb)[,-1]
 
-y_trn_whole <- trn$Total
-y_tst_whole <- tst$Total
+lasso_y_trn <- trn_oreb$OREB
+lasso_y_tst <- tst_oreb$OREB
 
 set.seed(5)
-cv.lasso.whole <- cv.glmnet(x_trn_whole, y_trn_whole, alpha=1)
-minlambda.whole = cv.lasso.whole$lambda.min
-
-lasso_model = glmnet(x_trn_whole, y_trn_whole, alpha=1, lambda=minlambda.whole)
-
-coef(lasso_model)
+cv.lasso.total <- cv.glmnet(lasso_x_trn, lasso_y_trn, alpha=1)
+lasso_minlambda = cv.lasso.total$lambda.min
 
 
+lasso = glmnet(lasso_x_trn, lasso_y_trn, alpha=1, lambda=lasso_minlambda)
+
+coef(lasso)
+
+
+#AST, FGA, Bench_AST, Home_Possesions Away_Possesions Home_Points_Per_Possesion Away_Points_Per_Possesion
+
+#Bench_AST + Bench_BLK + eFG_Starters_away + Home_Possesions + Away_Possesions + Home_Turnover_Percentage + Away_Turnover_Percentage + Home_OREB_Percentage  + Away_OREB_Percentage + Home_DREB_Percentage + Home_DREB_Percentage
 
 ```
 
 ```{r}
 ###get predictions dataset
-predictions <- read.csv(url('https://raw.githubusercontent.com/SuperMarioGiacomazzo/STOR538_WEBSITE/master/Playoffs/Round%202/Predictions.csv'))2
+predictions <- read.csv(url('https://raw.githubusercontent.com/SuperMarioGiacomazzo/STOR538_WEBSITE/master/Playoffs/Round%202/Predictions.csv'))
 ```
 
 ```{r}
@@ -219,11 +229,11 @@ find_averages = function(home_team, away_team, years, predictor) {
   #subsetting columns based on predictor to get only the 
   #regressors we need
   if (predictor == 'Spread' | predictor == 'Total') {
-    home_games <- home_games[, -c(1,2,3,4,5,6,7)]
-    away_games <- away_games[, -c(1,2,3,4,5,6,7)]
+    home_games <- home_games[, c(6,10,13,16,19,22,25,28,31,34,37,40,43,46,49,52,55,58,61,64,67,70,73,76,79,82,84,86,88,90,92)]
+    away_games <- away_games[, c(7,11,14,17,20,23,26,29,32,35,38,41,44,47,50,53,56,59,62,65,68,71,74,77,80,83,85,87,89,91,93)]
   } else {
-    home_games <- home_games[, -c(1,2,3,4,5,10,11, 13, 14, 15, 16, 17, 18)]
-    away_games <- away_games[, -c(1,2,3,4,5,10,11, 13, 14, 15, 16, 17, 18)]
+    home_games <- home_games[, c(6,10,19,22,25,28,31,34,37,40,43,46,49,52,55,58,61,64,67,70,73,76,79,82,84,86,88,90,92)]
+    away_games <- away_games[, c(7,11,20,23,26,29,32,35,38,41,44,47,50,53,56,59,62,65,68,71,74,77,80,83,85,87,89,91,93)]
   }
 
   #taking averages
@@ -233,10 +243,45 @@ find_averages = function(home_team, away_team, years, predictor) {
   y<- colMeans(away_games[sapply(away_games, is.numeric)], na.rm = TRUE)
   y <- as.data.frame(t(y))
   
-  ###Tucker Start here to pick and choose the appropriate stats from home or away
-  ### and put into another dataframe potentially
-  #x <- x[, c(10, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 43, )]
+  z <- merge(x,y)
+  
+  z$Spread <- z$`PTS_home` - z$`PTS_away`
+  z$Total <- z$`PTS_home` + z$`PTS_away`
+  z$OREB <- z$`OREB_home` + z$`OREB_away`
+  z$AST <- z$`AST_home` + z$`AST_away`
+  z$STL <- z$`STL_home` + z$`STL_away`
+  z$BLK <- z$`BLK_home` + z$`BLK_away`
+  z$TO <- z$`TO_home` + z$`TO_away`
+  z$FGA <- z$`FGA_home` + z$`FGA_away`
+  z$FTA <- z$`FTA_home` + z$`FTA_away`
+  z$Starters_OREB <- z$`OREB_Starters_home` + z$`OREB_Starters_away`
+  z$Starters_DREB <- z$`DREB_Starters_home` + z$`DREB_Starters_away`
+  z$Starters_REB <- z$`REB_Starters_home` + z$`REB_Starters_away`
+  z$Starters_AST <- z$`AST_Starters_home` + z$`AST_Starters_away`
+  z$Starters_STL <- z$`STL_Starters_home` + z$`STL_Starters_away`
+  z$Starters_BLK <- z$`BLK_Starters_home` + z$`BLK_Starters_away`
+  z$Starters_TO <- z$`TO_Starters_home` + z$`TO_Starters_away`
+  z$Bench_OREB <- z$`OREB_Bench_home` + z$`OREB_Bench_away`
+  z$Bench_DREB <- z$`DREB_Bench_home` + z$`DREB_Bench_away`
+  z$Bench_REB <- z$`REB_Bench_home` + z$`REB_Bench_away`
+  z$Bench_AST <- z$`AST_Bench_home` + z$`AST_Bench_away`
+  z$Bench_STL <- z$`STL_Bench_home` + z$`STL_Bench_away`
+  z$Bench_BLK <- z$`BLK_Bench_home` + z$`BLK_Bench_away`
+  z$Bench_TO <- z$`TO_Bench_home` + z$`TO_Bench_away`
+  z$Starters_eFG <- z$`eFG_Starters_home` + z$`eFG_Starters_away`
+  
+  if (predictor == 'Spread' | predictor == 'Total') {
+    z$DREB <- z$`DREB_home` + z$`DREB_away`
+    z$REB <- z$`REB_home` + z$`REB_away`
+    #z <- z[,-c(1,32)]
+  }
+  
+  if (predictor == 'OREB') {
+    z <- z[, -c(z$`OREB_home`,z$`OREB_away`)]
+  }
+  return (z)
 }
+  
 
 find_averages_only_home = function(home_team, years, predictor) {
   #subsetting based on year
@@ -272,6 +317,24 @@ best_model_spread <- lm(Spread~OREB_home + OREB_away + DREB_home + DREB_away +
     Away_OREB_Percentage + Away_DREB_Percentage + Home_AST_TO_Ratio + 
     Away_AST_TO_Ratio, data = trn)
 
+#AST, FGA, Bench_AST, Home_Possesions Away_Possesions Home_Points_Per_Possesion Away_Points_Per_Possesion
+x_trn_whole <- model.matrix(Total~ AST + FGA + Bench_AST + Home_Possesions + Away_Possesions + Home_Points_Per_Possesion + Away_Points_Per_Possesion, trn)[,-1]
+
+y_trn_whole <- trn$Total
+
+set.seed(5)
+cv.lasso.whole <- cv.glmnet(x_trn_whole, y_trn_whole, alpha=1)
+minlambda.whole = cv.lasso.whole$lambda.min
+lasso_model_total = glmnet(x_trn_whole, y_trn_whole, alpha=1, lambda=minlambda.whole)
+
+x_trn_whole_oreb <- model.matrix(OREB~Bench_AST + Bench_BLK + eFG_Starters_away + Home_Possesions + Away_Possesions + Home_Turnover_Percentage + Away_Turnover_Percentage + Home_OREB_Percentage  + Away_OREB_Percentage + Home_DREB_Percentage + Home_DREB_Percentage, trn_oreb)[,-1]
+y_trn_whole_oreb <- trn_oreb$OREB
+
+set.seed(5)
+cv.lasso.whole.oreb <- cv.glmnet(x_trn_whole_oreb, y_trn_whole_oreb, alpha=1)
+minlambda.whole.oreb = cv.lasso.whole.oreb$lambda.min
+best_model_oreb = glmnet(x_trn_whole_oreb, y_trn_whole_oreb, alpha=1, lambda=minlambda.whole.oreb)
+
 #this loops through the predictions dataset, grabs each home and away matchup, sends it through
 #our function to find averages, and predicts using our best model on the averages
 
@@ -282,12 +345,30 @@ for (i in 1:nrow(predictions)) {
   away <- row[, 3]
   
   #send to function to find the averages
-  avgs <- find_averages_only_home(home, 2019, 'Spread')
+  avgs <- find_averages(home, away, 2019, 'Spread')
   ##predict using our model 
   results <- predict(best_model_spread, avgs)
   predictions[i, 4] = results
+  
+  avgs2 <- find_averages(home, away, 2019, 'Total')
+  avgs2_x <- model.matrix(Total~AST + FGA + Bench_AST + Home_Possesions + Away_Possesions + Home_Points_Per_Possesion + Away_Points_Per_Possesion, avgs2)[,-1]
+  avgs2_x <- t(avgs2_x)
+  results2 <- predict(lasso_model_total, newx=avgs2_x)
+  predictions[i, 5] = results2
+  
+  avgs3 <- find_averages(home, away, 2019, 'OREB')
+  avgs3_x <- model.matrix(OREB~Bench_AST + Bench_BLK + eFG_Starters_away + Home_Possesions + Away_Possesions + Home_Turnover_Percentage + Away_Turnover_Percentage + Home_OREB_Percentage  + Away_OREB_Percentage + Home_DREB_Percentage + Home_DREB_Percentage, avgs3)[,-1]
+  avgs3_x <- t(avgs3_x)
+  results3 <- predict(best_model_oreb, newx=avgs3_x)
+  predictions[i, 6] = results3
+  
 }
 
 predictions
+
+predictions <- rename(predictions, 'Home Team' = as.character('Home.Team'))
+predictions <- rename(predictions, 'Away Team' = as.character('Away.Team'))
+predictions
+write.csv(predictions, file='Predictions.csv')
 
 ```
